@@ -1,27 +1,36 @@
-use axum::{
-    Router,
-    extract::Multipart, // ← Sekarang bisa!
-    routing::post,
-};
+use axum::{Router, extract::Query, response::IntoResponse, routing::get};
+use std::collections::HashMap;
 
-async fn upload(mut multipart: Multipart) -> String {
-    let mut file_names = Vec::new();
-    while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap_or("unknown").to_string();
-        file_names.push(name);
-    }
-    format!("Uploaded: {}", file_names.join(", "))
+use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
+
+// ============================================
+// ROUTE: /query?name=Eko
+// ============================================
+async fn route(
+    cookies: Cookies,
+    Query(query): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let name = query.get("name").unwrap();
+    cookies.add(Cookie::new("name", name.clone()));
+    format!("Hello {}", name)
 }
 
-// echo Hello World > test.txt
-// echo dummy > image.png
+// ============================================
+// MAIN
+// ============================================
 
-// curl -X POST http://localhost:3000/upload -F "file1=@test.txt" -F "file2=@image.png"
-// Output: Uploaded: file1, file2
+// http://localhost:3000/query?name=Audy
+// curl "http://localhost:3000/query?name=Eko"
+// curl -i "http://localhost:3000/query?name=Eko"
+// curl -c cookies.txt "http://localhost:3000/query?name=Eko"
+// curl -H "Cookie: name=Eko" "http://localhost:3000/query?name=eko"
+// curl "http://localhost:3000/query?name=Alice"
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/upload", post(upload));
+    let app = Router::new()
+        .route("/query", get(route))
+        .layer(CookieManagerLayer::new());
 
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
