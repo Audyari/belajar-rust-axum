@@ -1,32 +1,24 @@
-use axum::{Router, extract::Query, routing::get};
-use http::HeaderMap;
-use serde::Deserialize;
+use axum::{
+    Router,
+    extract::Path, // ← Tambahkan ini!
+    routing::get,
+};
 
-#[derive(Deserialize)]
-struct Filter {
-    page: u32,
-    limit: u32,
+async fn get_category(Path((product_id, category_id)): Path<(u32, String)>) -> String {
+    format!("Product {} Category {}", product_id, category_id)
 }
 
-async fn list_items(Query(filter): Query<Filter>) -> String {
-    format!("Page: {}, Limit: {}", filter.page, filter.limit)
-}
-
-async fn read_headers(headers: HeaderMap) -> String {
-    let user_agent = headers
-        .get("user-agent")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("Unknown");
-    format!("User-Agent: {}", user_agent)
-}
+// panggil gunakan :  http://localhost:3000/products/123/categories/456
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new()
-        .route("/headers", get(read_headers))
-        .route("/items", get(list_items));
+    let app = Router::new().route(
+        "/products/{product_id}/categories/{category_id}",
+        get(get_category),
+    );
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
         .unwrap();
+    println!("🚀 Server running at http://localhost:3000");
     axum::serve(listener, app).await.unwrap();
 }
