@@ -1,20 +1,15 @@
-use axum::{Json, Router, routing::get};
-use serde_json::json;
+use axum::{Router, http::StatusCode, response::IntoResponse, routing::get};
 
-async fn user() -> Json<serde_json::Value> {
-    Json(json!({
-        "id": 1,
-        "name": "Alice",
-        "age": 30
-    }))
+async fn handler() -> impl IntoResponse {
+    (StatusCode::OK, "Hello World")
 }
 
-// curl http://localhost:3000/user
-// Output: {"id":1,"name":"Alice","age":30}
+// curl http://localhost:3000/
+// Output: Hello World
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/user", get(user));
+    let app = Router::new().route("/", get(handler));
 
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
