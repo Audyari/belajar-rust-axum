@@ -1,21 +1,15 @@
-use axum::{
-    Router,
-    extract::Path, // ← Tambahkan ini!
-    routing::get,
-};
+use axum::{Router, routing::post};
 
-async fn get_category(Path((product_id, category_id)): Path<(u32, String)>) -> String {
-    format!("Product {} Category {}", product_id, category_id)
+async fn echo(body: String) -> String {
+    format!("You said: {}", body)
 }
 
-// panggil gunakan :  http://localhost:3000/products/123/categories/456
+// curl -X POST http://localhost:3000/echo -d "Hello World"
+// Output: You said: Hello World
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route(
-        "/products/{product_id}/categories/{category_id}",
-        get(get_category),
-    );
+    let app = Router::new().route("/echo", post(echo));
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
         .unwrap();
