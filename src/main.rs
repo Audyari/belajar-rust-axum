@@ -1,22 +1,35 @@
-use axum::{Router, extract::Json, routing::post};
+use axum::{Json, Router, extract::rejection::JsonRejection, routing::post};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-struct User {
-    name: String,
-    age: u8,
+#[allow(dead_code)]
+struct LoginRequest {
+    username: String,
+    password: String,
 }
 
-async fn create_user(Json(payload): Json<User>) -> String {
-    format!("User: {}, Age: {}", payload.name, payload.age)
+// ✅ HANDLE JSON REJECTION DENGAN Result
+async fn login(payload: Result<Json<LoginRequest>, JsonRejection>) -> String {
+    match payload {
+        Ok(request) => {
+            format!("Hello {}", request.username)
+        }
+        Err(error) => {
+            format!("Error: {:?}", error)
+        }
+    }
 }
 
-// curl -X POST http://localhost:3000/user -H "Content-Type: application/json" -d "{\"name\":\"Alice\",\"age\":30}"
-// Output: User: Alice, Age: 30
+// curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"12345\"}"
+// Output: Hello admin
+
+// curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -d "{\"username\":\"admin\"}"
+// Output: Error: InvalidJsonBody: missing field `password` at line 1 column 20
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/user", post(create_user));
+    let app = Router::new().route("/login", post(login));
+
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
         .unwrap();
