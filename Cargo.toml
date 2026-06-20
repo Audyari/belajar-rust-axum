@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.102"
-axum = "0.8.9"
+axum = { version = "0.8", features = ["multipart"] }
 axum-extra = "0.12.6"
 axum-test = "20.1.0"
 http = "1.4.2"

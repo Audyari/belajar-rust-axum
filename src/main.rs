@@ -1,23 +1,27 @@
-use axum::{Form, Router, routing::post};
-use serde::Deserialize;
+use axum::{
+    Router,
+    extract::Multipart, // ← Sekarang bisa!
+    routing::post,
+};
 
-#[derive(Deserialize)]
-#[allow(dead_code)] // Tambahkan attribute ini agar field password tidak dianggap unused
-struct LoginForm {
-    username: String,
-    password: String,
+async fn upload(mut multipart: Multipart) -> String {
+    let mut file_names = Vec::new();
+    while let Some(field) = multipart.next_field().await.unwrap() {
+        let name = field.name().unwrap_or("unknown").to_string();
+        file_names.push(name);
+    }
+    format!("Uploaded: {}", file_names.join(", "))
 }
 
-async fn login(Form(form): Form<LoginForm>) -> String {
-    format!("Welcome {}", form.username)
-}
+// echo Hello World > test.txt
+// echo dummy > image.png
 
-// curl -X POST http://localhost:3000/login -H "Content-Type: application/x-www-form-urlencoded" -d "username=admin&password=password"
-// Output: Welcome admin
+// curl -X POST http://localhost:3000/upload -F "file1=@test.txt" -F "file2=@image.png"
+// Output: Uploaded: file1, file2
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/login", post(login));
+    let app = Router::new().route("/upload", post(upload));
 
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
