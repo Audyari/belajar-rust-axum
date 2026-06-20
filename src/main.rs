@@ -12,6 +12,7 @@ use thiserror::Error;
 // ============================================
 #[derive(Error, Debug)]
 pub enum AppError {
+    // ← INI APPERROR!
     #[error("Validation error: {0}")]
     Validation(String),
     #[error("Database error: {0}")]
@@ -25,6 +26,7 @@ pub enum AppError {
 }
 
 impl IntoResponse for AppError {
+    // ← INI CARA CONVERT APPERROR → RESPONSE
     fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
             AppError::Validation(msg) => (StatusCode::BAD_REQUEST, msg),
@@ -47,7 +49,7 @@ impl IntoResponse for AppError {
 }
 
 // ============================================
-// 2️⃣ HANDLER DENGAN APPERROR
+// 2️⃣ HANDLER DENGAN APPERROR (PROSES - Cara Pakai)
 // ============================================
 async fn get_user() -> Result<Json<serde_json::Value>, AppError> {
     let user_id = 1;
