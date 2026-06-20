@@ -1,23 +1,23 @@
-use axum::{Router, extract::State, routing::get};
-use std::sync::Arc;
+use axum::{Router, routing::get};
 
-struct AppState {
-    message: String,
+async fn home() -> &'static str {
+    "Home"
 }
+async fn about() -> &'static str {
+    "About"
+}
+
+// curl http://localhost:3000/
+// curl http://localhost:3000/about
 
 #[tokio::main]
 async fn main() {
-    let state = Arc::new(AppState {
-        message: "Hello from closure!".to_string(),
-    });
+    let router1 = Router::new().route("/", get(home));
 
-    // ✅ PAKAI STATE (paling aman untuk Axum)
-    let app = Router::new()
-        .route(
-            "/",
-            get(|State(state): State<Arc<AppState>>| async move { state.message.clone() }),
-        )
-        .with_state(state);
+    let router2 = Router::new().route("/about", get(about));
+
+    // ✅ MERGE: Gabungin tanpa prefix
+    let app = Router::new().merge(router1).merge(router2);
 
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
