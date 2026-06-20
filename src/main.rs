@@ -1,48 +1,34 @@
-use axum::{Router, extract::Query, response::IntoResponse, routing::get};
-use std::collections::HashMap;
+use axum::{
+    Router,
+    body::Body, // ← Import Body!
+    http::{Request, StatusCode},
+    middleware::from_fn,
+    response::Response,
+    routing::get,
+};
 
-use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
+async fn log_middleware(
+    req: Request<Body>,           // ← 1️⃣ Request masuk
+    next: axum::middleware::Next, // ← 2️⃣ Next = fungsi selanjutnya
+) -> Result<Response, StatusCode> {
+    // ← 3️⃣ Return Response atau Error
 
-// ============================================
-// ROUTE: /query?name=Eko
-// ============================================
-
-// ============================================
-// 📨 REQUEST + 📤 RESPONSE
-// ============================================
-async fn route(
-    // ============================================
-    // 📨 INI REQUEST (Data dari client)
-    // ============================================
-    cookies: Cookies, // ← Request: baca cookie dari client
-    Query(query): Query<HashMap<String, String>>, // ← Request: baca query dari client
-) -> impl IntoResponse {
-    // Proses data dari request
-    let name = query.get("name").unwrap();
-
-    // ============================================
-    // 📤 INI RESPONSE (Data ke client)
-    // ============================================
-    cookies.add(Cookie::new("name", name.clone())); // ← Response: kirim cookie
-    format!("Hello {}", name) // ← Response: kirim body
+    println!("📥 {} {}", req.method(), req.uri().path());
+    let response = next.run(req).await; // ← 3️⃣ Jalankan handler
+    println!("📤 {}", response.status());
+    println!("---");
+    Ok(response)
 }
 
-// ============================================
-// MAIN
-// ============================================
-
-// http://localhost:3000/query?name=Audy
-// curl "http://localhost:3000/query?name=Eko"
-// curl -i "http://localhost:3000/query?name=Eko"
-// curl -c cookies.txt "http://localhost:3000/query?name=Eko"
-// curl -H "Cookie: name=Eko" "http://localhost:3000/query?name=eko"
-// curl "http://localhost:3000/query?name=Alice"
+async fn hello() -> &'static str {
+    "Hello World"
+}
 
 #[tokio::main]
 async fn main() {
     let app = Router::new()
-        .route("/query", get(route))
-        .layer(CookieManagerLayer::new());
+        .route("/", get(hello))
+        .layer(from_fn(log_middleware));
 
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
