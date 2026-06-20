@@ -1,60 +1,118 @@
 use axum::{
     Router,
-    body::Body,
-    http::{HeaderValue, Request, StatusCode},
-    middleware::from_fn,
-    response::Response,
+    http::StatusCode,
+    response::{IntoResponse, Json},
     routing::get,
 };
-use uuid::Uuid;
+use serde_json::json;
+use thiserror::Error;
 
 // ============================================
-// 🔍 REQUEST ID MIDDLEWARE
+// 1️⃣ APPERROR
 // ============================================
-async fn request_id_middleware(
-    req: Request<Body>,
-    next: axum::middleware::Next,
-) -> Result<Response, StatusCode> {
-    // 1️⃣ Baca atau buat Request ID
-    let request_id = req
-        .headers()
-        .get("x-request-id")
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| Uuid::new_v4().to_string());
+#[derive(Error, Debug)]
+pub enum AppError {
+    #[error("Validation error: {0}")]
+    Validation(String),
+    #[error("Database error: {0}")]
+    Database(String),
+    #[error("Not found: {0}")]
+    NotFound(String),
+    #[error("Unauthorized")]
+    Unauthorized,
+    #[error("Internal server error")]
+    Internal,
+}
 
-    println!("📨 Request ID: {}", request_id);
+impl IntoResponse for AppError {
+    fn into_response(self) -> axum::response::Response {
+        let (status, error_message) = match self {
+            AppError::Validation(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppError::Database(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
+            AppError::Internal => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
+        };
 
-    // 2️⃣ Lanjut ke handler
-    let mut response = next.run(req).await;
+        let body = Json(json!({
+            "error": error_message,
+            "status": status.as_u16(),
+        }));
 
-    // 3️⃣ Tambahkan Request ID ke response
-    response
-        .headers_mut()
-        .insert("x-request-id", HeaderValue::from_str(&request_id).unwrap());
-
-    println!("📤 Response sent (ID: {})", request_id);
-    Ok(response)
+        (status, body).into_response()
+    }
 }
 
 // ============================================
-// HANDLER
+// 2️⃣ HANDLER DENGAN APPERROR
 // ============================================
-async fn hello() -> &'static str {
-    "Hello World"
+async fn get_user() -> Result<Json<serde_json::Value>, AppError> {
+    let user_id = 1;
+
+    if user_id == 0 {
+        return Err(AppError::NotFound("User not found".to_string()));
+    }
+
+    if user_id == 1 {
+        return Ok(Json(json!({
+            "id": 1,
+            "name": "Alice",
+            "email": "alice@example.com"
+        })));
+    }
+
+    Err(AppError::Internal)
+}
+
+async fn create_user() -> Result<String, AppError> {
+    let name = "".to_string();
+
+    if name.is_empty() {
+        return Err(AppError::Validation("Name is required".to_string()));
+    }
+
+    Ok("User created".to_string())
+}
+
+async fn admin_only() -> Result<String, AppError> {
+    let token = "secret";
+
+    if token != "secret" {
+        return Err(AppError::Unauthorized);
+    }
+
+    Ok("Welcome admin".to_string())
 }
 
 // ============================================
-// MAIN
+// 3️⃣ MAIN
 // ============================================
 
-// curl -i -H "x-request-id: 999" http://localhost:3000/
+// 1. SUCCESS (GET /user)
+// curl http://localhost:3000/user
+// Output: {"id":1,"name":"Alice","email":"alice@example.com"}
+
+// 2. VALIDATION ERROR (GET /create)
+// curl http://localhost:3000/create
+// Output: {"error":"Name is required","status":400}
+
+// 3. UNAUTHORIZED (GET /admin)
+// curl http://localhost:3000/admin
+// Output: {"error":"Unauthorized","status":401}
+
+// 4. NOT FOUND (ubah user_id = 0 di kode)
+// curl http://localhost:3000/user
+// Output: {"error":"User not found","status":404}
 
 #[tokio::main]
 async fn main() {
     let app = Router::new()
-        .route("/", get(hello))
-        .layer(from_fn(request_id_middleware));
+        .route("/user", get(get_user))
+        .route("/create", get(create_user))
+        .route("/admin", get(admin_only));
 
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await

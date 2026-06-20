@@ -16,3 +16,4 @@ tower = "0.4"
 tower-cookies = "0.11"
 tower-http = { version = "0.7", features = ["trace"] }
 uuid = { version = "1.23.3", features = ["v4"] }
+thiserror = "1.0"
