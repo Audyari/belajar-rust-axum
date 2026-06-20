@@ -6,13 +6,25 @@ use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
 // ============================================
 // ROUTE: /query?name=Eko
 // ============================================
+
+// ============================================
+// 📨 REQUEST + 📤 RESPONSE
+// ============================================
 async fn route(
-    cookies: Cookies,
-    Query(query): Query<HashMap<String, String>>,
+    // ============================================
+    // 📨 INI REQUEST (Data dari client)
+    // ============================================
+    cookies: Cookies, // ← Request: baca cookie dari client
+    Query(query): Query<HashMap<String, String>>, // ← Request: baca query dari client
 ) -> impl IntoResponse {
+    // Proses data dari request
     let name = query.get("name").unwrap();
-    cookies.add(Cookie::new("name", name.clone()));
-    format!("Hello {}", name)
+
+    // ============================================
+    // 📤 INI RESPONSE (Data ke client)
+    // ============================================
+    cookies.add(Cookie::new("name", name.clone())); // ← Response: kirim cookie
+    format!("Hello {}", name) // ← Response: kirim body
 }
 
 // ============================================
