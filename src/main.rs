@@ -1,34 +1,20 @@
-use axum::{Json, Router, extract::rejection::JsonRejection, routing::post};
-use serde::Deserialize;
+use axum::{Json, Router, routing::get};
+use serde_json::json;
 
-#[derive(Deserialize)]
-#[allow(dead_code)]
-struct LoginRequest {
-    username: String,
-    password: String,
+async fn user() -> Json<serde_json::Value> {
+    Json(json!({
+        "id": 1,
+        "name": "Alice",
+        "age": 30
+    }))
 }
 
-// ✅ HANDLE JSON REJECTION DENGAN Result
-async fn login(payload: Result<Json<LoginRequest>, JsonRejection>) -> String {
-    match payload {
-        Ok(request) => {
-            format!("Hello {}", request.username)
-        }
-        Err(error) => {
-            format!("Error: {:?}", error)
-        }
-    }
-}
-
-// curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"12345\"}"
-// Output: Hello admin
-
-// curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -d "{\"username\":\"admin\"}"
-// Output: Error: InvalidJsonBody: missing field `password` at line 1 column 20
+// curl http://localhost:3000/user
+// Output: {"id":1,"name":"Alice","age":30}
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/login", post(login));
+    let app = Router::new().route("/user", get(user));
 
     let listener = tokio::net::TcpListener::bind("localhost:3000")
         .await
