@@ -1,0 +1,14 @@
+[package]
+name = "belajar-rust-axum"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.102"
+axum = "0.8.9"
+axum-extra = "0.12.6"
+axum-test = "20.1.0"
+http = "1.4.2"
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "1.52.3", features = ["full"] }
+tower = "0.5.3"
